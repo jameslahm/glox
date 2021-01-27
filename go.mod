@@ -1,3 +1,3 @@
-module github.com/jameslahm/lox-go
+module github.com/jameslahm/glox
 
 go 1.15
