@@ -99,13 +99,12 @@ func (lexer *Lexer) Scan() {
 	case '"':
 		lexer.start++
 		lexer.AddStringToken()
-	case 'o':
-		lexer.AddToken(OR)
-	case 
 	default:
 		if utils.IsDigit(c) {
 			lexer.AddNumberToken()
 			break
+		} else if utils.IsAlpha(c) {
+			lexer.AddIdentifierToken()
 		}
 		lexer.hasError = true
 		utils.Error(lexer.line, fmt.Sprintf("%s %c", utils.UNEXPECTED_CHARACTER_MESSAGE, c))
@@ -180,10 +179,55 @@ func (lexer *Lexer) AddNumberToken() {
 	}
 
 	lexeme := lexer.Source[lexer.start:lexer.current]
-	value, err := strconv.ParseDouble(lexeme)
+	value, err := strconv.ParseFloat(lexeme, 64)
 	if err != nil {
 		utils.Error(lexer.line, fmt.Sprintf("%s %s", utils.INVALID_NUMBER, lexeme))
 	}
 
 	lexer.AddToken(NUMBER, value)
+}
+
+func (lexer *Lexer) AddIdentifierToken() {
+	for utils.IsAlpha(lexer.Peek()) || utils.IsDigit(lexer.Peek()) {
+		lexer.Advance()
+	}
+
+	lexeme := lexer.Source[lexer.start:lexer.current]
+
+	switch lexeme {
+	case "and":
+		lexer.AddToken(AND, nil)
+	case "class":
+		lexer.AddToken(CLASS, nil)
+	case "else":
+		lexer.AddToken(ELSE, nil)
+	case "false":
+		lexer.AddToken(FALSE, nil)
+	case "for":
+		lexer.AddToken(FOR, nil)
+	case "fun":
+		lexer.AddToken(FUN, nil)
+	case "if":
+		lexer.AddToken(IF, nil)
+	case "nil":
+		lexer.AddToken(NIL, nil)
+	case "or":
+		lexer.AddToken(OR, nil)
+	case "print":
+		lexer.AddToken(PRINT, nil)
+	case "return":
+		lexer.AddToken(RETURN, nil)
+	case "super":
+		lexer.AddToken(SUPER, nil)
+	case "this":
+		lexer.AddToken(THIS, nil)
+	case "true":
+		lexer.AddToken(TRUE, nil)
+	case "var":
+		lexer.AddToken(VAR, nil)
+	case "while":
+		lexer.AddToken(WHILE, nil)
+	default:
+		lexer.AddToken(IDENTIFIER, nil)
+	}
 }
