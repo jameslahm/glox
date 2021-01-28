@@ -1,7 +1,9 @@
 package lexer
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/jameslahm/glox/utils"
@@ -25,6 +27,14 @@ func NewLexer(source string) *Lexer {
 		line:    1,
 	}
 	return &lexer
+}
+
+func (lexer *Lexer) ShowTokens() {
+	info, err := json.MarshalIndent(lexer.Tokens, "", "  ")
+	if err != nil {
+		log.Fatalf("Error json MarshalIndent")
+	}
+	fmt.Println(string(info))
 }
 
 func (lexer *Lexer) Lex() {
@@ -67,25 +77,26 @@ func (lexer *Lexer) Scan() {
 		}
 	case '!':
 		if lexer.Match('=') {
-			lexer.AddToken(BANG_EQUAL, nil)
+			lexer.AddTokenWithLexeme(BANG_EQUAL, nil, "!=")
 		} else {
 			lexer.AddToken(BANG, nil)
 		}
 	case '=':
 		if lexer.Match('=') {
-			lexer.AddToken(EQUAL_EQUAL, nil)
+			lexer.AddTokenWithLexeme(EQUAL_EQUAL, nil, "==")
 		} else {
 			lexer.AddToken(EQUAL, nil)
 		}
 	case '<':
 		if lexer.Match('=') {
-			lexer.AddToken(LESS_EQUAL, nil)
+			lexer.AddTokenWithLexeme(LESS_EQUAL, nil, "<=")
+			lexer.Advance()
 		} else {
 			lexer.AddToken(LESS, nil)
 		}
 	case '>':
 		if lexer.Match('=') {
-			lexer.AddToken(GREATER_EQUAL, nil)
+			lexer.AddTokenWithLexeme(GREATER_EQUAL, nil, ">=")
 		} else {
 			lexer.AddToken(GREATER, nil)
 		}

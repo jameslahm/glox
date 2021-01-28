@@ -13,13 +13,17 @@ import (
 
 type AstInterpreter struct {
 	// DefaultVisitor
-	env *environment.Environment
+	*environment.Env
 }
 
 func NewAstInterpreter() *AstInterpreter {
-	return &AstInterpreter{
-		env: environment.NewEnvironment(nil),
+	interpreter := &AstInterpreter{
+		Env: environment.NewEnvironment(nil),
 	}
+
+	interpreter.Define("clock", &Clock{})
+
+	return interpreter
 }
 
 func (v *AstInterpreter) VisitBinaryExpr(node *ast.BinaryExpr) interface{} {
@@ -63,9 +67,23 @@ func (v *AstInterpreter) VisitBinaryExpr(node *ast.BinaryExpr) interface{} {
 	}
 }
 
+func (v *AstInterpreter) VisitFuncDeclaration(node *ast.FuncDeclaration) interface{} {
+	v.Env.Define(node.Name.Lexeme, node)
+	return nil
+}
+
+func (v *AstInterpreter) VisitReturnStatement(node *ast.ReturnStatement) interface{} {
+	var value interface{}
+	if node.Expr != nil {
+		value = node.Expr.Accept(v)
+		fmt.Printf("%#v\n", value)
+	}
+	panic(value)
+}
+
 func (v *AstInterpreter) VisitAssignment(node *ast.Assignment) interface{} {
 	value := node.Expr.Accept(v)
-	v.env.Assign(node.Name, value)
+	v.Env.Assign(node.Name, value)
 	return value
 }
 
@@ -96,22 +114,21 @@ func (v *AstInterpreter) VisitExprStatement(node *ast.ExprStatement) interface{}
 
 func (v *AstInterpreter) VisitPrintStatement(node *ast.PrintStatement) interface{} {
 	value := node.Node.Accept(v)
-	fmt.Println(value)
 	return value
 }
 
 func (v *AstInterpreter) VisitVarDeclaration(node *ast.VarDeclaration) interface{} {
 	if node.Expr != nil {
 		value := node.Expr.Accept(v)
-		v.env.Define(node.Name.Lexeme, value)
+		v.Env.Define(node.Name.Lexeme, value)
 	} else {
-		v.env.Define(node.Name.Lexeme, nil)
+		v.Env.Define(node.Name.Lexeme, nil)
 	}
 	return nil
 }
 
 func (v *AstInterpreter) VisitVariable(node *ast.Variable) interface{} {
-	return v.env.Get(node.Name)
+	return v.Env.Get(node.Name)
 }
 
 func (v *AstInterpreter) VisitProgram(node *ast.Program) interface{} {
@@ -127,14 +144,31 @@ func (v *AstInterpreter) VisitProgram(node *ast.Program) interface{} {
 }
 
 func (v *AstInterpreter) VisitBlockStatement(node *ast.BlockStatement) interface{} {
-	parentEnv := v.env
-	newEnv := environment.NewEnvironment(v.env)
-	v.env = newEnv
+	v.EnterScope()
 	for _, statement := range node.Statements {
 		statement.Accept(v)
 	}
-	v.env = parentEnv
+	v.ExitScope()
 	return nil
+}
+
+func (v *AstInterpreter) VisitCallExpr(node *ast.CallExpr) interface{} {
+	callee := node.Callee.Accept(v)
+
+	var arguments []interface{}
+	for _, param := range node.Arguments {
+		value := param.Accept(v)
+		arguments = append(arguments, value)
+	}
+	if f, ok := callee.(ast.GloxCallable); ok {
+		if f.Arity() == len(node.Arguments) {
+			return f.Call(v, arguments)
+		} else {
+			panic(glox_error.NewRuntimeError(utils.MISMATCH_CALL_PARAMS_LENGTH, node.Paren))
+		}
+	} else {
+		panic(glox_error.NewRuntimeError(utils.ONLY_CALL_FUNCTION_AND_CLASS, node.Paren))
+	}
 }
 
 func (v *AstInterpreter) VisitIfStatement(node *ast.IfStatement) interface{} {

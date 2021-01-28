@@ -50,7 +50,23 @@ func (parser *Parser) Statement() Node {
 	if parser.Match(lexer.FOR) {
 		return parser.ForStatement()
 	}
+	if parser.Match(lexer.RETURN) {
+		return parser.ReturnStatement()
+	}
 	return parser.ExprStatement()
+}
+
+func (parser *Parser) ReturnStatement() Node {
+	keyword := parser.Previous()
+	var expr Node
+	if !parser.Check(lexer.SEMICOLON) {
+		expr = parser.Expression()
+	}
+	parser.MustConsume(lexer.SEMICOLON, utils.EXPECT_SEMICOLON_AFTER_RETURN)
+	return &ReturnStatement{
+		Keyword: keyword,
+		Expr:    expr,
+	}
 }
 
 func (parser *Parser) ForStatement() Node {
@@ -59,6 +75,7 @@ func (parser *Parser) ForStatement() Node {
 	var initializer Node
 	if parser.Match(lexer.VAR) {
 		initializer = parser.VarDeclaration()
+
 	} else if parser.Match(lexer.SEMICOLON) {
 		initializer = nil
 	} else {
@@ -163,7 +180,7 @@ func (parser *Parser) LogicAnd() Node {
 func (parser *Parser) BlockStatement() Node {
 	var statements []Node
 	for !parser.Check(lexer.RIGHT_BRACE) && !parser.isAtEnd() {
-		statement := parser.Statement()
+		statement := parser.Declaration()
 		if statement != nil {
 			statements = append(statements, statement)
 		}
@@ -202,10 +219,40 @@ func (parser *Parser) Declaration() Node {
 		return parser.VarDeclaration()
 	}
 
+	if parser.Match(lexer.FUN) {
+		return parser.FuncDeclaration()
+	}
+
 	return parser.Statement()
 }
 
+func (parser *Parser) FuncDeclaration() Node {
+	name := parser.MustConsume(lexer.IDENTIFIER, utils.EXPECT_FUNCTION_NAME)
+	parser.MustConsume(lexer.LEFT_PAREN, utils.EXPECT_LEFT_PAREN_AFTER_FUNCTION_NAME)
+
+	var parameters []lexer.Token
+
+	for !parser.isAtEnd() && !parser.Check(lexer.RIGHT_PAREN) {
+		for {
+			param := parser.MustConsume(lexer.IDENTIFIER, utils.EXPECT_PARAM_NAME)
+			parameters = append(parameters, param)
+			if !parser.Match(lexer.COMMA) {
+				break
+			}
+		}
+	}
+	parser.MustConsume(lexer.RIGHT_PAREN, utils.EXPECT_RIGHT_PAREN_AFTER_PARAMETERS)
+	body := parser.Statement()
+
+	return &FuncDeclaration{
+		Name:   name,
+		Params: parameters,
+		Body:   body,
+	}
+}
+
 func (parser *Parser) VarDeclaration() Node {
+
 	name := parser.MustConsume(lexer.IDENTIFIER, utils.EXPECT_VARIABLE_NAME)
 	var initializer Node
 	if parser.Match(lexer.EQUAL) {
@@ -306,7 +353,34 @@ func (parser *Parser) Unary() Node {
 			Right:    node,
 		}
 	}
-	return parser.Primary()
+	return parser.Call()
+}
+
+func (parser *Parser) Call() Node {
+	expr := parser.Primary()
+
+	for parser.Match(lexer.LEFT_PAREN) {
+		var arguments []Node
+		for !parser.Check(lexer.RIGHT_PAREN) && !parser.isAtEnd() {
+			arg := parser.Expression()
+			arguments = append(arguments, arg)
+			if !parser.Match(lexer.COMMA) {
+				break
+			}
+		}
+		parser.MustConsume(lexer.RIGHT_PAREN, utils.EXPECT_RIGHT_PAREN_AFTER_ARGUMENTS)
+		if len(arguments) > 255 {
+			utils.Error(parser.Previous().Line, utils.WARN_NO_MORE_THAN_MAXIMUM_ARGUMENTS)
+		}
+		expr = &CallExpr{
+			Callee:    expr,
+			Arguments: arguments,
+			Paren:     parser.Previous(),
+		}
+
+	}
+
+	return expr
 }
 
 func (parser *Parser) Primary() Node {
@@ -358,6 +432,7 @@ func (parser *Parser) MustConsume(tokenType int, message string) lexer.Token {
 		return parser.Previous()
 	}
 
+	fmt.Printf("%#v", parser.Peek())
 	message = fmt.Sprintf("[line %d] Error %s", parser.Previous().Line, message)
 	err := errors.New(message)
 	parser.Errors = append(parser.Errors, err)

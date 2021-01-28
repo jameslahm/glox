@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"github.com/jameslahm/glox/ast"
+	"github.com/jameslahm/glox/environment"
 )
 
 type DefaultVisitor struct {
+	*environment.Env
 }
 
 func (v *DefaultVisitor) VisitBinaryExpr(node *ast.BinaryExpr) interface{} {
@@ -61,10 +63,22 @@ func (v *DefaultVisitor) VisitWhileStatement(node *ast.WhileStatement) interface
 	return nil
 }
 
+func (v *DefaultVisitor) VisitCallExpr(node *ast.CallExpr) interface{} {
+	return nil
+}
+
 func (v *DefaultVisitor) VisitProgram(node *ast.Program) interface{} {
 	for _, statement := range node.Statements {
 		fmt.Printf("%T", v)
 		statement.Accept(v)
 	}
+	return nil
+}
+
+func (v *DefaultVisitor) VisitFuncDeclaration(node *ast.FuncDeclaration) interface{} {
+	return nil
+}
+
+func (v *DefaultVisitor) VisitReturnStatement(node *ast.ReturnStatement) interface{} {
 	return nil
 }

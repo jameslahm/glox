@@ -1,6 +1,8 @@
 package ast
 
-import "github.com/jameslahm/glox/lexer"
+import (
+	"github.com/jameslahm/glox/lexer"
+)
 
 type Visitor interface {
 	VisitBinaryExpr(node *BinaryExpr) interface{}
@@ -17,6 +19,15 @@ type Visitor interface {
 	VisitIfStatement(node *IfStatement) interface{}
 	VisitLogicalExpr(node *LogicalExpr) interface{}
 	VisitWhileStatement(node *WhileStatement) interface{}
+	VisitCallExpr(node *CallExpr) interface{}
+	VisitFuncDeclaration(node *FuncDeclaration) interface{}
+	VisitReturnStatement(node *ReturnStatement) interface{}
+
+	EnterScope()
+	ExitScope()
+	Define(name string, value interface{})
+	Assign(token lexer.Token, value interface{})
+	Get(token lexer.Token) interface{}
 }
 
 type Node interface {
@@ -143,4 +154,58 @@ type WhileStatement struct {
 
 func (node *WhileStatement) Accept(v Visitor) interface{} {
 	return v.VisitWhileStatement(node)
+}
+
+type CallExpr struct {
+	Callee    Node
+	Arguments []Node
+
+	// ? For Location
+	Paren lexer.Token
+}
+
+func (node *CallExpr) Accept(v Visitor) interface{} {
+	return v.VisitCallExpr(node)
+}
+
+type GloxCallable interface {
+	Call(v Visitor, arguments []interface{}) interface{}
+	Arity() int
+}
+
+type FuncDeclaration struct {
+	Name   lexer.Token
+	Params []lexer.Token
+	Body   Node
+}
+
+func (f *FuncDeclaration) Call(v Visitor, arguments []interface{}) (ret interface{}) {
+	v.EnterScope()
+	for i, param := range f.Params {
+		v.Define(param.Lexeme, arguments[i])
+	}
+	defer func() {
+		r := recover()
+		ret = r
+	}()
+	f.Body.Accept(v)
+	v.ExitScope()
+	return nil
+}
+
+func (f *FuncDeclaration) Arity() int {
+	return len(f.Params)
+}
+
+func (f *FuncDeclaration) Accept(v Visitor) interface{} {
+	return v.VisitFuncDeclaration(f)
+}
+
+type ReturnStatement struct {
+	Keyword lexer.Token
+	Expr    Node
+}
+
+func (node *ReturnStatement) Accept(v Visitor) interface{} {
+	return v.VisitReturnStatement(node)
 }
