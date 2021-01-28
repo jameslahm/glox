@@ -105,6 +105,7 @@ func (lexer *Lexer) Scan() {
 			break
 		} else if utils.IsAlpha(c) {
 			lexer.AddIdentifierToken()
+			break
 		}
 		lexer.hasError = true
 		utils.Error(lexer.line, fmt.Sprintf("%s %c", utils.UNEXPECTED_CHARACTER_MESSAGE, c))
@@ -160,6 +161,8 @@ func (lexer *Lexer) AddStringToken() {
 
 	if lexer.IsAtEnd() {
 		utils.Error(lexer.line, utils.UNTERMINATED_STRING)
+	} else {
+		lexer.Advance()
 	}
 
 	lexeme := lexer.Source[lexer.start : lexer.current-1]

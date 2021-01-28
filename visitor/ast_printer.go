@@ -8,7 +8,9 @@ import (
 	"github.com/jameslahm/glox/ast"
 )
 
-type AstPrinter struct{}
+type AstPrinter struct {
+	DefaultVisitor
+}
 
 func (v *AstPrinter) VisitBinaryExpr(node *ast.BinaryExpr) interface{} {
 	return v.Parenthesize(node.Operator.Lexeme, node.Left, node.Right)

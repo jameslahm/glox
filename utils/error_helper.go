@@ -3,5 +3,5 @@ package utils
 import "fmt"
 
 func Error(line int, message string) {
-	fmt.Printf("[line %d]  Error %s", line, message)
+	fmt.Printf("[line %d]  Error %s\n", line, message)
 }

@@ -2,6 +2,7 @@ package ast
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/jameslahm/glox/lexer"
 	"github.com/jameslahm/glox/utils"
@@ -20,7 +21,76 @@ func NewParser(tokens []lexer.Token) *Parser {
 }
 
 func (parser *Parser) Parse() Node {
-	return parser.Expression()
+	var statements []Node
+	for !parser.isAtEnd() {
+		statement := parser.Declaration()
+		if statement != nil {
+			statements = append(statements, statement)
+		}
+	}
+	return &Program{
+		Statements: statements,
+	}
+}
+
+func (parser *Parser) Statement() Node {
+	if parser.Match(lexer.PRINT) {
+		return parser.PrintStatement()
+	}
+	return parser.ExprStatement()
+}
+
+func (parser *Parser) PrintStatement() Node {
+	node := parser.Expression()
+	parser.Consume(lexer.SEMICOLON, utils.EXPECT_SEMICOLON_AFTER_VALUE)
+	return &PrintStatement{
+		Node: node,
+	}
+}
+
+func (parser *Parser) ExprStatement() Node {
+	node := parser.Expression()
+	parser.Consume(lexer.SEMICOLON, utils.EXPECT_SEMICOLON_AFTER_VALUE)
+	return &ExprStatement{
+		Expr: node,
+	}
+}
+
+func (parser *Parser) Declaration() Node {
+	if parser.Match(lexer.VAR) {
+		return parser.VarDeclaration()
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			parser.Synchronize()
+		}
+
+	}()
+
+	return parser.Statement()
+}
+
+func (parser *Parser) VarDeclaration() Node {
+	name, err := parser.Consume(lexer.IDENTIFIER, utils.EXPECT_VARIABLE_NAME)
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	var initializer Node
+	if parser.Match(lexer.EQUAL) {
+		initializer = parser.Expression()
+	}
+	_, err = parser.Consume(lexer.SEMICOLON, utils.EXPECT_SEMICOLON_AFTER_VARIABLE_DECLARATION)
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	return &VarDeclaration{
+		Name: name,
+		Expr: initializer,
+	}
+
 }
 
 func (parser *Parser) Expression() Node {
@@ -115,11 +185,10 @@ func (parser *Parser) Primary() Node {
 	if parser.Match(lexer.LEFT_PAREN) {
 		node := parser.Expression()
 		// TODO: error handle
-		err := parser.Consume(lexer.RIGHT_PAREN, utils.UNMATCHED_PAREN)
+		_, err := parser.Consume(lexer.RIGHT_PAREN, utils.UNMATCHED_PAREN)
 		if err != nil {
-			return &GroupExpr{
-				Expr: node,
-			}
+			fmt.Println(err)
+			panic(err)
 		}
 		return &GroupExpr{
 			Expr: node,
@@ -136,14 +205,19 @@ func (parser *Parser) Primary() Node {
 			Value: parser.Previous().Value,
 		}
 	}
+	if parser.Match(lexer.IDENTIFIER) {
+		return &Variable{
+			Name: parser.Previous(),
+		}
+	}
 	return nil
 }
 
-func (parser *Parser) Consume(tokenType int, message string) error {
+func (parser *Parser) Consume(tokenType int, message string) (lexer.Token, error) {
 	if parser.Check(tokenType) {
-		return nil
+		return parser.Peek(), nil
 	}
-	return errors.New(message)
+	return lexer.Token{}, errors.New(message)
 }
 
 func (parser *Parser) Match(tokenTypes ...int) bool {

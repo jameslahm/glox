@@ -39,6 +39,5 @@ func (g *Glox) Run(script string) {
 	parser := ast.NewParser(lex.Tokens)
 	interpreter := visitor.NewAstInterpreter()
 	node := parser.Parse()
-	value := node.Accept(interpreter)
-	fmt.Println(value)
+	node.Accept(interpreter)
 }

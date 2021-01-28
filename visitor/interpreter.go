@@ -1,6 +1,8 @@
 package visitor
 
 import (
+	"fmt"
+
 	"github.com/jameslahm/glox/ast"
 	"github.com/jameslahm/glox/glox_error"
 	"github.com/jameslahm/glox/lexer"
@@ -9,6 +11,7 @@ import (
 )
 
 type AstInterpreter struct {
+	DefaultVisitor
 }
 
 func NewAstInterpreter() *AstInterpreter {
@@ -76,6 +79,23 @@ func (v *AstInterpreter) VisitUnaryExpr(node *ast.UnaryExpr) interface{} {
 		return nil
 	}
 }
+
+func (v *AstInterpreter) VisitExprStatement(node *ast.ExprStatement) interface{} {
+	return node.Expr.Accept(v)
+}
+
+func (v *AstInterpreter) VisitPrintStatement(node *ast.PrintStatement) interface{} {
+	value := node.Node.Accept(v)
+	fmt.Println(value)
+	return value
+}
+
+// func (v *AstInterpreter) VisitProgram(node *ast.Program) interface{} {
+// 	for _, statement := range node.Statements {
+// 		statement.Accept(v)
+// 	}
+// 	return nil
+// }
 
 func (v *AstInterpreter) CheckNumberOperand(token lexer.Token, value interface{}) {
 	if _, ok := value.(float64); !ok {
