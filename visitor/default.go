@@ -49,6 +49,18 @@ func (v *DefaultVisitor) VisitBlockStatement(node *ast.BlockStatement) interface
 	return nil
 }
 
+func (v *DefaultVisitor) VisitIfStatement(node *ast.IfStatement) interface{} {
+	return nil
+}
+
+func (v *DefaultVisitor) VisitLogicalExpr(node *ast.LogicalExpr) interface{} {
+	return nil
+}
+
+func (v *DefaultVisitor) VisitWhileStatement(node *ast.WhileStatement) interface{} {
+	return nil
+}
+
 func (v *DefaultVisitor) VisitProgram(node *ast.Program) interface{} {
 	for _, statement := range node.Statements {
 		fmt.Printf("%T", v)

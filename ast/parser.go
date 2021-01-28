@@ -41,7 +41,123 @@ func (parser *Parser) Statement() Node {
 	if parser.Match(lexer.LEFT_BRACE) {
 		return parser.BlockStatement()
 	}
+	if parser.Match(lexer.IF) {
+		return parser.IfStatement()
+	}
+	if parser.Match(lexer.WHILE) {
+		return parser.WhileStatement()
+	}
+	if parser.Match(lexer.FOR) {
+		return parser.ForStatement()
+	}
 	return parser.ExprStatement()
+}
+
+func (parser *Parser) ForStatement() Node {
+	parser.MustConsume(lexer.LEFT_PAREN, utils.EXPECT_LEFT_PAREN_AFTER_FOR)
+
+	var initializer Node
+	if parser.Match(lexer.VAR) {
+		initializer = parser.VarDeclaration()
+	} else if parser.Match(lexer.SEMICOLON) {
+		initializer = nil
+	} else {
+		initializer = parser.ExprStatement()
+	}
+
+	var condition Node
+	if parser.Match(lexer.SEMICOLON) {
+		condition = &LiteralExpr{
+			Value: true,
+		}
+	} else {
+		condition = parser.Expression()
+		parser.MustConsume(lexer.SEMICOLON, utils.EXPECT_SEMICOLON_AFTER_LOOP_CONDITION)
+	}
+
+	var increment Node
+	if parser.Match(lexer.RIGHT_PAREN) {
+		increment = nil
+	} else {
+		increment = parser.Expression()
+		parser.MustConsume(lexer.RIGHT_PAREN, utils.EXPECT_RIGHT_PAREN_AFTER_CLAUSES)
+	}
+
+	body := parser.Statement()
+	if increment != nil {
+		body = &BlockStatement{
+			Statements: []Node{body, increment},
+		}
+	}
+
+	body = &WhileStatement{
+		Expr: condition,
+		Then: body,
+	}
+
+	if initializer != nil {
+		body = &BlockStatement{
+			Statements: []Node{initializer, body},
+		}
+	}
+
+	return body
+}
+
+func (parser *Parser) WhileStatement() Node {
+	parser.MustConsume(lexer.LEFT_PAREN, utils.EXPECT_LEFT_PAREN_AFTER_WHILE)
+	expr := parser.Expression()
+	parser.MustConsume(lexer.RIGHT_PAREN, utils.EXPECT_RIGHT_PAREN_AFTER_CONDITION)
+
+	statement := parser.Statement()
+
+	return &WhileStatement{
+		Expr: expr,
+		Then: statement,
+	}
+}
+
+func (parser *Parser) IfStatement() Node {
+	parser.MustConsume(lexer.LEFT_PAREN, utils.EXPECT_LEFT_PAREN_AFTER_IF)
+	expr := parser.Expression()
+	parser.MustConsume(lexer.RIGHT_PAREN, utils.EXPECT_RIGHT_PAREN_AFTER_IF_CONDITION)
+	thenStatement := parser.Statement()
+
+	var elseStatement Node
+	if parser.Match(lexer.ELSE) {
+		elseStatement = parser.Statement()
+	}
+	return &IfStatement{
+		Expr: expr,
+		Then: thenStatement,
+		Else: elseStatement,
+	}
+}
+
+func (parser *Parser) LogicOr() Node {
+	node := parser.LogicAnd()
+	for !parser.isAtEnd() && parser.Match(lexer.OR) {
+		right := parser.LogicAnd()
+		node = &LogicalExpr{
+			Left:     node,
+			Right:    right,
+			Operator: parser.Previous(),
+		}
+	}
+	return node
+}
+
+func (parser *Parser) LogicAnd() Node {
+	node := parser.Equality()
+	for !parser.isAtEnd() && parser.Match(lexer.AND) {
+		right := parser.Equality()
+		node = &LogicalExpr{
+			Left:     node,
+			Right:    right,
+			Operator: parser.Previous(),
+		}
+	}
+	return node
 }
 
 func (parser *Parser) BlockStatement() Node {
@@ -108,7 +224,7 @@ func (parser *Parser) Expression() Node {
 
 func (parser *Parser) Equality() Node {
 	node := parser.Comparison()
-	for parser.Match(lexer.BANG_EQUAL, lexer.EQUAL) {
+	for parser.Match(lexer.BANG_EQUAL, lexer.EQUAL_EQUAL) {
 		token := parser.Previous()
 		right := parser.Comparison()
 		node = &BinaryExpr{
@@ -121,7 +237,7 @@ func (parser *Parser) Equality() Node {
 }
 
 func (parser *Parser) Assignment() Node {
-	expr := parser.Equality()
+	expr := parser.LogicOr()
 	if parser.Match(lexer.EQUAL) {
 		value := parser.Assignment()
 		if v, ok := expr.(*Variable); ok {

@@ -14,6 +14,9 @@ type Visitor interface {
 	VisitVariable(node *Variable) interface{}
 	VisitAssignment(node *Assignment) interface{}
 	VisitBlockStatement(node *BlockStatement) interface{}
+	VisitIfStatement(node *IfStatement) interface{}
+	VisitLogicalExpr(node *LogicalExpr) interface{}
+	VisitWhileStatement(node *WhileStatement) interface{}
 }
 
 type Node interface {
@@ -111,4 +114,33 @@ type BlockStatement struct {
 
 func (node *BlockStatement) Accept(v Visitor) interface{} {
 	return v.VisitBlockStatement(node)
+}
+
+type IfStatement struct {
+	Expr Node
+	Then Node
+	Else Node
+}
+
+func (node *IfStatement) Accept(v Visitor) interface{} {
+	return v.VisitIfStatement(node)
+}
+
+type LogicalExpr struct {
+	Left     Node
+	Operator lexer.Token
+	Right    Node
+}
+
+func (node *LogicalExpr) Accept(v Visitor) interface{} {
+	return v.VisitLogicalExpr(node)
+}
+
+type WhileStatement struct {
+	Expr Node
+	Then Node
+}
+
+func (node *WhileStatement) Accept(v Visitor) interface{} {
+	return v.VisitWhileStatement(node)
 }

@@ -41,7 +41,7 @@ func (e *Environment) Get(token lexer.Token) interface{} {
 		return v
 	} else {
 		if e.Parent != nil {
-			e.Parent.Get(token)
+			return e.Parent.Get(token)
 		}
 		panic(glox_error.NewRuntimeError(fmt.Sprintf(utils.UNDEFINED_VARIABLE, &token.Lexeme), token))
 	}

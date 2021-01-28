@@ -115,6 +115,11 @@ func (v *AstInterpreter) VisitVariable(node *ast.Variable) interface{} {
 }
 
 func (v *AstInterpreter) VisitProgram(node *ast.Program) interface{} {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(r)
+		}
+	}()
 	for _, statement := range node.Statements {
 		statement.Accept(v)
 	}
@@ -129,6 +134,50 @@ func (v *AstInterpreter) VisitBlockStatement(node *ast.BlockStatement) interface
 		statement.Accept(v)
 	}
 	v.env = parentEnv
+	return nil
+}
+
+func (v *AstInterpreter) VisitIfStatement(node *ast.IfStatement) interface{} {
+	value := cast.ToBool(node.Expr.Accept(v))
+	if value {
+		node.Then.Accept(v)
+	} else {
+		if node.Else != nil {
+			node.Else.Accept(v)
+		}
+	}
+	return nil
+}
+
+func (v *AstInterpreter) VisitLogicalExpr(node *ast.LogicalExpr) interface{} {
+	if node.Operator.Type == lexer.AND {
+		leftValue := node.Left.Accept(v)
+		if !cast.ToBool(leftValue) {
+			return leftValue
+		} else {
+			rightValue := node.Right.Accept(v)
+			return rightValue
+		}
+	}
+	if node.Operator.Type == lexer.OR {
+		leftValue := node.Left.Accept(v)
+		if !cast.ToBool(leftValue) {
+			rightValue := cast.ToBool(node.Right.Accept(v))
+			return rightValue
+		} else {
+			return leftValue
+		}
+
+	}
+	return nil
+}
+
+func (v *AstInterpreter) VisitWhileStatement(node *ast.WhileStatement) interface{} {
+	value := cast.ToBool(node.Expr.Accept(v))
+	for value {
+		node.Then.Accept(v)
+		value = cast.ToBool(node.Expr.Accept(v))
+	}
 	return nil
 }
 
