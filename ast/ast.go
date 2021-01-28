@@ -28,6 +28,10 @@ type Visitor interface {
 	Define(name string, value interface{})
 	Assign(token lexer.Token, value interface{})
 	Get(token lexer.Token) interface{}
+
+	NewExecuteScope()
+
+	RestoreExecuteScope()
 }
 
 type Node interface {
@@ -180,16 +184,17 @@ type FuncDeclaration struct {
 }
 
 func (f *FuncDeclaration) Call(v Visitor, arguments []interface{}) (ret interface{}) {
-	v.EnterScope()
+	v.NewExecuteScope()
 	for i, param := range f.Params {
 		v.Define(param.Lexeme, arguments[i])
 	}
 	defer func() {
 		r := recover()
+		v.RestoreExecuteScope()
 		ret = r
 	}()
 	f.Body.Accept(v)
-	v.ExitScope()
+	v.RestoreExecuteScope()
 	return nil
 }
 

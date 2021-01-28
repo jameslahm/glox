@@ -14,6 +14,7 @@ import (
 type AstInterpreter struct {
 	// DefaultVisitor
 	*environment.Env
+	_originEnv *environment.Env
 }
 
 func NewAstInterpreter() *AstInterpreter {
@@ -238,4 +239,14 @@ func (v *AstInterpreter) ExitScope() {
 	// TODO parent = nil
 	parent := v.Env.Parent
 	v.Env = parent
+}
+
+func (v *AstInterpreter) NewExecuteScope() {
+	newEnv := environment.NewEnvironment(v.Env)
+	v._originEnv = v.Env
+	v.Env = newEnv
+}
+
+func (v *AstInterpreter) RestoreExecuteScope() {
+	v.Env = v._originEnv
 }
