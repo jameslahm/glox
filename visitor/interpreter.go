@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/jameslahm/glox/ast"
+	"github.com/jameslahm/glox/environment"
 	"github.com/jameslahm/glox/glox_error"
 	"github.com/jameslahm/glox/lexer"
 	"github.com/jameslahm/glox/utils"
@@ -11,11 +12,16 @@ import (
 )
 
 type AstInterpreter struct {
-	DefaultVisitor
+	// DefaultVisitor
+	env environment.Environment
 }
 
 func NewAstInterpreter() *AstInterpreter {
-	return &AstInterpreter{}
+	return &AstInterpreter{
+		env: environment.Environment{
+			Values: make(map[string]interface{}),
+		},
+	}
 }
 
 func (v *AstInterpreter) VisitBinaryExpr(node *ast.BinaryExpr) interface{} {
@@ -59,6 +65,12 @@ func (v *AstInterpreter) VisitBinaryExpr(node *ast.BinaryExpr) interface{} {
 	}
 }
 
+func (v *AstInterpreter) VisitAssignment(node *ast.Assignment) interface{} {
+	value := node.Expr.Accept(v)
+	v.env.Assign(node.Name, value)
+	return value
+}
+
 func (v *AstInterpreter) VisitLiteralExpr(node *ast.LiteralExpr) interface{} {
 	return node.Value
 }
@@ -90,12 +102,26 @@ func (v *AstInterpreter) VisitPrintStatement(node *ast.PrintStatement) interface
 	return value
 }
 
-// func (v *AstInterpreter) VisitProgram(node *ast.Program) interface{} {
-// 	for _, statement := range node.Statements {
-// 		statement.Accept(v)
-// 	}
-// 	return nil
-// }
+func (v *AstInterpreter) VisitVarDeclaration(node *ast.VarDeclaration) interface{} {
+	if node.Expr != nil {
+		value := node.Expr.Accept(v)
+		v.env.Define(node.Name.Lexeme, value)
+	} else {
+		v.env.Define(node.Name.Lexeme, nil)
+	}
+	return nil
+}
+
+func (v *AstInterpreter) VisitVariable(node *ast.Variable) interface{} {
+	return v.env.Get(node.Name)
+}
+
+func (v *AstInterpreter) VisitProgram(node *ast.Program) interface{} {
+	for _, statement := range node.Statements {
+		statement.Accept(v)
+	}
+	return nil
+}
 
 func (v *AstInterpreter) CheckNumberOperand(token lexer.Token, value interface{}) {
 	if _, ok := value.(float64); !ok {

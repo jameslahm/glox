@@ -9,3 +9,6 @@ const INVALID_OPERAND_NUMBERS = "Operands must be numbers"
 const EXPECT_SEMICOLON_AFTER_VALUE = "Expect ';' after value"
 const EXPECT_VARIABLE_NAME = "Expect variable name"
 const EXPECT_SEMICOLON_AFTER_VARIABLE_DECLARATION = "Expect ';' after variable declaration"
+const INVALID_ASSIGNMENT_TARGET = "Invalid assignment target"
+
+const UNDEFINED_VARIABLE = "Undefined variable %s\n"

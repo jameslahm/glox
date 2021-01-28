@@ -10,8 +10,9 @@ type Visitor interface {
 	VisitExprStatement(node *ExprStatement) interface{}
 	VisitPrintStatement(node *PrintStatement) interface{}
 	VisitProgram(node *Program) interface{}
-	VisitVarDeclartion(node *VarDeclaration) interface{}
+	VisitVarDeclaration(node *VarDeclaration) interface{}
 	VisitVariable(node *Variable) interface{}
+	VisitAssignment(node *Assignment) interface{}
 }
 
 type Node interface {
@@ -83,7 +84,7 @@ type VarDeclaration struct {
 }
 
 func (node *VarDeclaration) Accept(v Visitor) interface{} {
-	return v.VisitVarDeclartion(node)
+	return v.VisitVarDeclaration(node)
 }
 
 type Program struct {
@@ -92,4 +93,13 @@ type Program struct {
 
 func (node *Program) Accept(v Visitor) interface{} {
 	return v.VisitProgram(node)
+}
+
+type Assignment struct {
+	Name lexer.Token
+	Expr Node
+}
+
+func (node *Assignment) Accept(v Visitor) interface{} {
+	return v.VisitAssignment(node)
 }

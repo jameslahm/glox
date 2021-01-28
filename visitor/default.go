@@ -33,6 +33,18 @@ func (v *DefaultVisitor) VisitPrintStatement(node *ast.PrintStatement) interface
 	return nil
 }
 
+func (v *DefaultVisitor) VisitVarDeclaration(node *ast.VarDeclaration) interface{} {
+	return nil
+}
+
+func (v *DefaultVisitor) VisitVariable(node *ast.Variable) interface{} {
+	return nil
+}
+
+func (v *DefaultVisitor) VisitAssignment(node *ast.Assignment) interface{} {
+	return nil
+}
+
 func (v *DefaultVisitor) VisitProgram(node *ast.Program) interface{} {
 	for _, statement := range node.Statements {
 		fmt.Printf("%T", v)

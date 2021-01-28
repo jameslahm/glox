@@ -11,6 +11,7 @@ import (
 type Parser struct {
 	Tokens  []lexer.Token
 	current int
+	Errors  []error
 }
 
 func NewParser(tokens []lexer.Token) *Parser {
@@ -42,7 +43,7 @@ func (parser *Parser) Statement() Node {
 
 func (parser *Parser) PrintStatement() Node {
 	node := parser.Expression()
-	parser.Consume(lexer.SEMICOLON, utils.EXPECT_SEMICOLON_AFTER_VALUE)
+	parser.MustConsume(lexer.SEMICOLON, utils.EXPECT_SEMICOLON_AFTER_VALUE)
 	return &PrintStatement{
 		Node: node,
 	}
@@ -50,17 +51,13 @@ func (parser *Parser) PrintStatement() Node {
 
 func (parser *Parser) ExprStatement() Node {
 	node := parser.Expression()
-	parser.Consume(lexer.SEMICOLON, utils.EXPECT_SEMICOLON_AFTER_VALUE)
+	parser.MustConsume(lexer.SEMICOLON, utils.EXPECT_SEMICOLON_AFTER_VALUE)
 	return &ExprStatement{
 		Expr: node,
 	}
 }
 
 func (parser *Parser) Declaration() Node {
-	if parser.Match(lexer.VAR) {
-		return parser.VarDeclaration()
-	}
-
 	defer func() {
 		if r := recover(); r != nil {
 			parser.Synchronize()
@@ -68,33 +65,28 @@ func (parser *Parser) Declaration() Node {
 
 	}()
 
+	if parser.Match(lexer.VAR) {
+		return parser.VarDeclaration()
+	}
+
 	return parser.Statement()
 }
 
 func (parser *Parser) VarDeclaration() Node {
-	name, err := parser.Consume(lexer.IDENTIFIER, utils.EXPECT_VARIABLE_NAME)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
+	name := parser.MustConsume(lexer.IDENTIFIER, utils.EXPECT_VARIABLE_NAME)
 	var initializer Node
 	if parser.Match(lexer.EQUAL) {
 		initializer = parser.Expression()
 	}
-	_, err = parser.Consume(lexer.SEMICOLON, utils.EXPECT_SEMICOLON_AFTER_VARIABLE_DECLARATION)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
+	parser.MustConsume(lexer.SEMICOLON, utils.EXPECT_SEMICOLON_AFTER_VARIABLE_DECLARATION)
 	return &VarDeclaration{
 		Name: name,
 		Expr: initializer,
 	}
-
 }
 
 func (parser *Parser) Expression() Node {
-	return parser.Equality()
+	return parser.Assignment()
 }
 
 func (parser *Parser) Equality() Node {
@@ -109,6 +101,24 @@ func (parser *Parser) Equality() Node {
 		}
 	}
 	return node
+}
+
+func (parser *Parser) Assignment() Node {
+	expr := parser.Equality()
+	if parser.Match(lexer.EQUAL) {
+		value := parser.Assignment()
+		if v, ok := expr.(*Variable); ok {
+			return &Assignment{
+				Name: v.Name,
+				Expr: value,
+			}
+		}
+
+		err := errors.New(utils.INVALID_ASSIGNMENT_TARGET)
+		fmt.Println(err)
+		panic(err)
+	}
+	return expr
 }
 
 func (parser *Parser) Comparison() Node {
@@ -185,11 +195,7 @@ func (parser *Parser) Primary() Node {
 	if parser.Match(lexer.LEFT_PAREN) {
 		node := parser.Expression()
 		// TODO: error handle
-		_, err := parser.Consume(lexer.RIGHT_PAREN, utils.UNMATCHED_PAREN)
-		if err != nil {
-			fmt.Println(err)
-			panic(err)
-		}
+		parser.MustConsume(lexer.RIGHT_PAREN, utils.UNMATCHED_PAREN)
 		return &GroupExpr{
 			Expr: node,
 		}
@@ -213,11 +219,17 @@ func (parser *Parser) Primary() Node {
 	return nil
 }
 
-func (parser *Parser) Consume(tokenType int, message string) (lexer.Token, error) {
+func (parser *Parser) MustConsume(tokenType int, message string) lexer.Token {
 	if parser.Check(tokenType) {
-		return parser.Peek(), nil
+		parser.current++
+		return parser.Previous()
 	}
-	return lexer.Token{}, errors.New(message)
+
+	message = fmt.Sprintf("[line %d] Error %s", parser.Previous().Line, message)
+	err := errors.New(message)
+	parser.Errors = append(parser.Errors, err)
+	fmt.Println(err)
+	panic(err)
 }
 
 func (parser *Parser) Match(tokenTypes ...int) bool {
@@ -255,21 +267,23 @@ func (parser *Parser) Previous() lexer.Token {
 }
 
 func (parser *Parser) Synchronize() {
-	parser.Advance()
-	for !parser.isAtEnd() {
-		if parser.Previous().Type == lexer.SEMICOLON {
-			return
-		}
+	if parser.isAtEnd() {
+		return
+	}
 
+	for !parser.isAtEnd() {
 		switch parser.Peek().Type {
-		case lexer.CLASS:
-		case lexer.FUN:
-		case lexer.VAR:
-		case lexer.FOR:
-		case lexer.IF:
-		case lexer.WHILE:
-		case lexer.PRINT:
-		case lexer.RETURN:
+		case lexer.CLASS,
+			lexer.FUN,
+			lexer.VAR,
+			lexer.FOR,
+			lexer.IF,
+			lexer.WHILE,
+			lexer.PRINT,
+			lexer.RETURN:
+			return
+		case lexer.SEMICOLON:
+			parser.Advance()
 			return
 		}
 
