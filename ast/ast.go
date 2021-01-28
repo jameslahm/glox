@@ -1,4 +1,4 @@
-package parser
+package ast
 
 import "github.com/jameslahm/glox"
 
@@ -14,9 +14,9 @@ type Node interface {
 }
 
 type BinaryExpr struct {
-	left     Node
-	right    Node
-	operator glox.Token
+	Left     Node
+	Right    Node
+	Operator glox.Token
 }
 
 func (node *BinaryExpr) Accept(v Visitor) interface{} {
@@ -24,8 +24,8 @@ func (node *BinaryExpr) Accept(v Visitor) interface{} {
 }
 
 type UnaryExpr struct {
-	operator glox.Token
-	right    Node
+	Operator glox.Token
+	Right    Node
 }
 
 func (node *UnaryExpr) Accept(v Visitor) interface{} {
@@ -33,7 +33,7 @@ func (node *UnaryExpr) Accept(v Visitor) interface{} {
 }
 
 type GroupExpr struct {
-	expr Node
+	Expr Node
 }
 
 func (node *GroupExpr) Accept(v Visitor) interface{} {
@@ -41,7 +41,7 @@ func (node *GroupExpr) Accept(v Visitor) interface{} {
 }
 
 type LiteralExpr struct {
-	value interface{}
+	Value interface{}
 }
 
 func (node *LiteralExpr) Accept(v Visitor) interface{} {
