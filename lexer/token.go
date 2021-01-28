@@ -1,4 +1,4 @@
-package glox
+package lexer
 
 import (
 	"fmt"

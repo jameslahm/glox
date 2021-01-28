@@ -3,13 +3,24 @@ package ast
 import (
 	"errors"
 
-	"github.com/jameslahm/glox"
+	"github.com/jameslahm/glox/lexer"
 	"github.com/jameslahm/glox/utils"
 )
 
 type Parser struct {
-	Tokens  []glox.Token
+	Tokens  []lexer.Token
 	current int
+}
+
+func NewParser(tokens []lexer.Token) *Parser {
+	return &Parser{
+		current: 0,
+		Tokens:  tokens,
+	}
+}
+
+func (parser *Parser) Parse() Node {
+	return parser.Expression()
 }
 
 func (parser *Parser) Expression() Node {
@@ -18,7 +29,7 @@ func (parser *Parser) Expression() Node {
 
 func (parser *Parser) Equality() Node {
 	node := parser.Comparison()
-	for parser.Match(glox.BANG_EQUAL, glox.EQUAL) {
+	for parser.Match(lexer.BANG_EQUAL, lexer.EQUAL) {
 		token := parser.Previous()
 		right := parser.Comparison()
 		node = &BinaryExpr{
@@ -32,7 +43,7 @@ func (parser *Parser) Equality() Node {
 
 func (parser *Parser) Comparison() Node {
 	node := parser.Term()
-	for parser.Match(glox.GREATER, glox.GREATER_EQUAL, glox.LESS, glox.LESS_EQUAL) {
+	for parser.Match(lexer.GREATER, lexer.GREATER_EQUAL, lexer.LESS, lexer.LESS_EQUAL) {
 		token := parser.Previous()
 		right := parser.Term()
 		node = &BinaryExpr{
@@ -47,7 +58,7 @@ func (parser *Parser) Comparison() Node {
 
 func (parser *Parser) Term() Node {
 	node := parser.Factor()
-	for parser.Match(glox.MINUS, glox.PLUS) {
+	for parser.Match(lexer.MINUS, lexer.PLUS) {
 		token := parser.Previous()
 		right := parser.Factor()
 		node = &BinaryExpr{
@@ -61,7 +72,7 @@ func (parser *Parser) Term() Node {
 
 func (parser *Parser) Factor() Node {
 	node := parser.Unary()
-	for parser.Match(glox.SLASH, glox.STAR) {
+	for parser.Match(lexer.SLASH, lexer.STAR) {
 		token := parser.Previous()
 		right := parser.Unary()
 		node = &BinaryExpr{
@@ -74,7 +85,7 @@ func (parser *Parser) Factor() Node {
 }
 
 func (parser *Parser) Unary() Node {
-	if parser.Match(glox.BANG, glox.MINUS) {
+	if parser.Match(lexer.BANG, lexer.MINUS) {
 		token := parser.Previous()
 		node := parser.Unary()
 		return &UnaryExpr{
@@ -86,25 +97,25 @@ func (parser *Parser) Unary() Node {
 }
 
 func (parser *Parser) Primary() Node {
-	if parser.Match(glox.TRUE) {
+	if parser.Match(lexer.TRUE) {
 		return &LiteralExpr{
 			Value: true,
 		}
 	}
-	if parser.Match(glox.FALSE) {
+	if parser.Match(lexer.FALSE) {
 		return &LiteralExpr{
 			Value: false,
 		}
 	}
-	if parser.Match(glox.NIL) {
+	if parser.Match(lexer.NIL) {
 		return &LiteralExpr{
 			Value: nil,
 		}
 	}
-	if parser.Match(glox.LEFT_PAREN) {
+	if parser.Match(lexer.LEFT_PAREN) {
 		node := parser.Expression()
 		// TODO: error handle
-		err := parser.Consume(glox.RIGHT_PAREN, utils.UNMATCHED_PAREN)
+		err := parser.Consume(lexer.RIGHT_PAREN, utils.UNMATCHED_PAREN)
 		if err != nil {
 			return &GroupExpr{
 				Expr: node,
@@ -115,12 +126,12 @@ func (parser *Parser) Primary() Node {
 		}
 
 	}
-	if parser.Match(glox.NUMBER) {
+	if parser.Match(lexer.NUMBER) {
 		return &LiteralExpr{
 			Value: parser.Previous().Value,
 		}
 	}
-	if parser.Match(glox.STRING) {
+	if parser.Match(lexer.STRING) {
 		return &LiteralExpr{
 			Value: parser.Previous().Value,
 		}
@@ -156,35 +167,35 @@ func (parser *Parser) isAtEnd() bool {
 	return parser.current >= len(parser.Tokens)
 }
 
-func (parser *Parser) Peek() glox.Token {
+func (parser *Parser) Peek() lexer.Token {
 	return parser.Tokens[parser.current]
 }
 
-func (parser *Parser) Advance() glox.Token {
+func (parser *Parser) Advance() lexer.Token {
 	parser.current++
 	return parser.Previous()
 }
 
-func (parser *Parser) Previous() glox.Token {
+func (parser *Parser) Previous() lexer.Token {
 	return parser.Tokens[parser.current-1]
 }
 
 func (parser *Parser) Synchronize() {
 	parser.Advance()
 	for !parser.isAtEnd() {
-		if parser.Previous().Type == glox.SEMICOLON {
+		if parser.Previous().Type == lexer.SEMICOLON {
 			return
 		}
 
 		switch parser.Peek().Type {
-		case glox.CLASS:
-		case glox.FUN:
-		case glox.VAR:
-		case glox.FOR:
-		case glox.IF:
-		case glox.WHILE:
-		case glox.PRINT:
-		case glox.RETURN:
+		case lexer.CLASS:
+		case lexer.FUN:
+		case lexer.VAR:
+		case lexer.FOR:
+		case lexer.IF:
+		case lexer.WHILE:
+		case lexer.PRINT:
+		case lexer.RETURN:
 			return
 		}
 

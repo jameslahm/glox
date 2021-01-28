@@ -1,4 +1,4 @@
-package glox
+package lexer
 
 import (
 	"fmt"
@@ -117,6 +117,9 @@ func (lexer *Lexer) Advance() byte {
 }
 
 func (lexer *Lexer) Peek() byte {
+	if lexer.current >= len(lexer.Source) {
+		return 0
+	}
 	return lexer.Source[lexer.current]
 }
 

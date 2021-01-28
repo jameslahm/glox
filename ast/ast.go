@@ -1,6 +1,6 @@
 package ast
 
-import "github.com/jameslahm/glox"
+import "github.com/jameslahm/glox/lexer"
 
 type Visitor interface {
 	VisitBinaryExpr(node *BinaryExpr) interface{}
@@ -16,7 +16,7 @@ type Node interface {
 type BinaryExpr struct {
 	Left     Node
 	Right    Node
-	Operator glox.Token
+	Operator lexer.Token
 }
 
 func (node *BinaryExpr) Accept(v Visitor) interface{} {
@@ -24,7 +24,7 @@ func (node *BinaryExpr) Accept(v Visitor) interface{} {
 }
 
 type UnaryExpr struct {
-	Operator glox.Token
+	Operator lexer.Token
 	Right    Node
 }
 
