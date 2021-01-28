@@ -38,7 +38,24 @@ func (parser *Parser) Statement() Node {
 	if parser.Match(lexer.PRINT) {
 		return parser.PrintStatement()
 	}
+	if parser.Match(lexer.LEFT_BRACE) {
+		return parser.BlockStatement()
+	}
 	return parser.ExprStatement()
+}
+
+func (parser *Parser) BlockStatement() Node {
+	var statements []Node
+	for !parser.Check(lexer.RIGHT_BRACE) && !parser.isAtEnd() {
+		statement := parser.Statement()
+		if statement != nil {
+			statements = append(statements, statement)
+		}
+	}
+	parser.MustConsume(lexer.RIGHT_BRACE, utils.EXPECT_RIGHT_BRACE_AFTER_BLOCK)
+	return &BlockStatement{
+		Statements: statements,
+	}
 }
 
 func (parser *Parser) PrintStatement() Node {

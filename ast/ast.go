@@ -13,6 +13,7 @@ type Visitor interface {
 	VisitVarDeclaration(node *VarDeclaration) interface{}
 	VisitVariable(node *Variable) interface{}
 	VisitAssignment(node *Assignment) interface{}
+	VisitBlockStatement(node *BlockStatement) interface{}
 }
 
 type Node interface {
@@ -102,4 +103,12 @@ type Assignment struct {
 
 func (node *Assignment) Accept(v Visitor) interface{} {
 	return v.VisitAssignment(node)
+}
+
+type BlockStatement struct {
+	Statements []Node
+}
+
+func (node *BlockStatement) Accept(v Visitor) interface{} {
+	return v.VisitBlockStatement(node)
 }

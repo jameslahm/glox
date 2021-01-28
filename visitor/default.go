@@ -45,6 +45,10 @@ func (v *DefaultVisitor) VisitAssignment(node *ast.Assignment) interface{} {
 	return nil
 }
 
+func (v *DefaultVisitor) VisitBlockStatement(node *ast.BlockStatement) interface{} {
+	return nil
+}
+
 func (v *DefaultVisitor) VisitProgram(node *ast.Program) interface{} {
 	for _, statement := range node.Statements {
 		fmt.Printf("%T", v)

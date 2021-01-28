@@ -10,5 +10,6 @@ const EXPECT_SEMICOLON_AFTER_VALUE = "Expect ';' after value"
 const EXPECT_VARIABLE_NAME = "Expect variable name"
 const EXPECT_SEMICOLON_AFTER_VARIABLE_DECLARATION = "Expect ';' after variable declaration"
 const INVALID_ASSIGNMENT_TARGET = "Invalid assignment target"
+const EXPECT_RIGHT_BRACE_AFTER_BLOCK = "Expect '}' after block"
 
 const UNDEFINED_VARIABLE = "Undefined variable %s\n"

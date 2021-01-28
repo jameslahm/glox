@@ -13,14 +13,12 @@ import (
 
 type AstInterpreter struct {
 	// DefaultVisitor
-	env environment.Environment
+	env *environment.Environment
 }
 
 func NewAstInterpreter() *AstInterpreter {
 	return &AstInterpreter{
-		env: environment.Environment{
-			Values: make(map[string]interface{}),
-		},
+		env: environment.NewEnvironment(nil),
 	}
 }
 
@@ -120,6 +118,17 @@ func (v *AstInterpreter) VisitProgram(node *ast.Program) interface{} {
 	for _, statement := range node.Statements {
 		statement.Accept(v)
 	}
+	return nil
+}
+
+func (v *AstInterpreter) VisitBlockStatement(node *ast.BlockStatement) interface{} {
+	parentEnv := v.env
+	newEnv := environment.NewEnvironment(v.env)
+	v.env = newEnv
+	for _, statement := range node.Statements {
+		statement.Accept(v)
+	}
+	v.env = parentEnv
 	return nil
 }
 
