@@ -228,3 +228,14 @@ func (v *AstInterpreter) CheckNumberOperands(token lexer.Token, lefValue interfa
 		panic(glox_error.NewRuntimeError(utils.INVALID_OPERAND_NUMBERS, token))
 	}
 }
+
+func (v *AstInterpreter) EnterScope() {
+	newEnv := environment.NewEnvironment(v.Env)
+	v.Env = newEnv
+}
+
+func (v *AstInterpreter) ExitScope() {
+	// TODO parent = nil
+	parent := v.Env.Parent
+	v.Env = parent
+}

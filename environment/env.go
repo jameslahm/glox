@@ -46,14 +46,3 @@ func (e *Env) Get(token lexer.Token) interface{} {
 		panic(glox_error.NewRuntimeError(fmt.Sprintf(utils.UNDEFINED_VARIABLE, &token.Lexeme), token))
 	}
 }
-
-func (e *Env) EnterScope() {
-	newEnv := NewEnvironment(e)
-	e = newEnv
-}
-
-func (e *Env) ExitScope() {
-	// TODO parent = nil
-	parent := e.Parent
-	e = parent
-}

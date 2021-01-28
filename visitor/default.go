@@ -82,3 +82,10 @@ func (v *DefaultVisitor) VisitFuncDeclaration(node *ast.FuncDeclaration) interfa
 func (v *DefaultVisitor) VisitReturnStatement(node *ast.ReturnStatement) interface{} {
 	return nil
 }
+
+func (v *DefaultVisitor) EnterScope() {
+
+}
+
+func (v *DefaultVisitor) ExitScope() {
+}
