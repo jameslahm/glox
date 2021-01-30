@@ -1,0 +1,14 @@
+class Object {
+    sayHello(){
+        print "object";
+    }
+}
+
+class Person < Object {
+    sayHello(){
+        super.sayHello();
+    }
+}
+
+var a = Person();
+a.sayHello();

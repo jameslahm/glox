@@ -474,7 +474,7 @@ func (parser *Parser) Primary() Node {
 	}
 	if parser.Match(lexer.SUPER) {
 		keyword := parser.Previous()
-		parser.MustConsume(lexer.COMMA, utils.EXPECT_DOT_AFTER_SUPER)
+		parser.MustConsume(lexer.DOT, utils.EXPECT_DOT_AFTER_SUPER)
 		token := parser.MustConsume(lexer.IDENTIFIER, utils.EXPECT_SUPER_CLASS_NAME)
 
 		return &SuperExpr{

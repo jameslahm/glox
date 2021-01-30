@@ -243,10 +243,11 @@ func (v *Resolver) VisitClassDeclaration(node *ast.ClassDeclaration) interface{}
 
 		v.InClassType = SubClass
 
+		node.SuperClass.Accept(v)
+
 		v.EnterScope()
 		scope := v.GetCurrentScope()
 		scope["super"] = true
-		node.SuperClass.Accept(v)
 	}
 
 	v.EnterScope()

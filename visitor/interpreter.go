@@ -71,7 +71,7 @@ func (v *AstInterpreter) VisitBinaryExpr(node *ast.BinaryExpr) interface{} {
 }
 
 func (v *AstInterpreter) VisitFuncDeclaration(node *ast.FuncDeclaration) interface{} {
-	loxFunction := NewLoxFunction(node, v.Env)
+	loxFunction := NewLoxFunction(node, v.Env, false)
 	v.Env.Define(node.Name.Lexeme, loxFunction)
 	return nil
 }
@@ -242,7 +242,8 @@ func (v *AstInterpreter) VisitClassDeclaration(node *ast.ClassDeclaration) inter
 
 	if node.SuperClass != nil {
 		var ok = false
-		superClass, ok = node.SuperClass.Accept(v).(*LoxClass)
+		superClass := node.SuperClass.Accept(v)
+		superClass, ok = superClass.(*LoxClass)
 		if !ok {
 			panic(glox_error.NewRuntimeError(utils.SUPER_CLASS_MUST_BE_CLASS, node.Name))
 		}
