@@ -13,13 +13,15 @@ import (
 
 type AstInterpreter struct {
 	// DefaultVisitor
-	Env             *environment.Env
-	_originEnvStack []*environment.Env
+	Env                  *environment.Env
+	_originEnvStack      []*environment.Env
+	VariableBindDistance map[ast.Node]int
 }
 
-func NewAstInterpreter() *AstInterpreter {
+func NewAstInterpreter(variableBindDistances map[ast.Node]int) *AstInterpreter {
 	interpreter := &AstInterpreter{
-		Env: environment.NewEnvironment(nil),
+		Env:                  environment.NewEnvironment(nil),
+		VariableBindDistance: variableBindDistances,
 	}
 
 	interpreter.Env.Define("clock", &Clock{})
@@ -87,7 +89,8 @@ func (v *AstInterpreter) VisitReturnStatement(node *ast.ReturnStatement) interfa
 
 func (v *AstInterpreter) VisitAssignment(node *ast.Assignment) interface{} {
 	value := node.Expr.Accept(v)
-	v.Env.Assign(node.Name, value)
+	distance := v.VariableBindDistance[node]
+	v.Env.Assign(node.Name, value, distance)
 	return value
 }
 
@@ -133,7 +136,11 @@ func (v *AstInterpreter) VisitVarDeclaration(node *ast.VarDeclaration) interface
 }
 
 func (v *AstInterpreter) VisitVariable(node *ast.Variable) interface{} {
-	return v.Env.Get(node.Name)
+	distance, ok := v.VariableBindDistance[node]
+	if !ok {
+		panic(glox_error.NewRuntimeError("No Distance", node.Name))
+	}
+	return v.Env.Get(node.Name, distance)
 }
 
 func (v *AstInterpreter) VisitProgram(node *ast.Program) interface{} {

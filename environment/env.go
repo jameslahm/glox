@@ -24,25 +24,26 @@ func (e *Env) Define(name string, value interface{}) {
 	e.Values[name] = value
 }
 
-func (e *Env) Assign(token lexer.Token, value interface{}) {
-	if _, ok := e.Values[token.Lexeme]; ok {
-		e.Values[token.Lexeme] = value
+func (e *Env) Assign(token lexer.Token, value interface{}, distance int) {
+	env := e
+	for i := 0; i < distance; i++ {
+		env = env.Parent
+	}
+	if _, ok := env.Values[token.Lexeme]; ok {
+		env.Values[token.Lexeme] = value
 	} else {
-		if e.Parent != nil {
-			e.Parent.Assign(token, value)
-			return
-		}
 		panic(glox_error.NewRuntimeError(fmt.Sprintf(utils.UNDEFINED_VARIABLE, token.Lexeme), token))
 	}
 }
 
-func (e *Env) Get(token lexer.Token) interface{} {
-	if v, ok := e.Values[token.Lexeme]; ok {
+func (e *Env) Get(token lexer.Token, distance int) interface{} {
+	env := e
+	for i := 0; i < distance; i++ {
+		env = env.Parent
+	}
+	if v, ok := env.Values[token.Lexeme]; ok {
 		return v
 	} else {
-		if e.Parent != nil {
-			return e.Parent.Get(token)
-		}
 		panic(glox_error.NewRuntimeError(fmt.Sprintf(utils.UNDEFINED_VARIABLE, token.Lexeme), token))
 	}
 }

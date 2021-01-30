@@ -37,7 +37,22 @@ func (g *Glox) Run(script string) {
 	lex := lexer.NewLexer(script)
 	lex.Lex()
 	parser := ast.NewParser(lex.Tokens)
-	interpreter := visitor.NewAstInterpreter()
 	node := parser.Parse()
+
+	if len(parser.Errors) != 0 {
+		fmt.Println("Error: parse failed")
+		return
+	}
+
+	resolver := visitor.NewResolver()
+	node.Accept(resolver)
+
+	if len(resolver.Errors) != 0 {
+		fmt.Println("Error: resolve failed")
+		return
+	}
+
+	interpreter := visitor.NewAstInterpreter(resolver.VariableBindingDistances)
+
 	node.Accept(interpreter)
 }
