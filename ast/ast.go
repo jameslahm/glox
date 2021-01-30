@@ -22,6 +22,10 @@ type Visitor interface {
 	VisitCallExpr(node *CallExpr) interface{}
 	VisitFuncDeclaration(node *FuncDeclaration) interface{}
 	VisitReturnStatement(node *ReturnStatement) interface{}
+	VisitClassDeclaration(node *ClassDeclaration) interface{}
+	VisitGetExpr(node *GetExpr) interface{}
+	VisitSetExpr(node *SetExpr) interface{}
+	VisitThisExpr(node *ThisExpr) interface{}
 }
 
 type Node interface {
@@ -179,4 +183,40 @@ type ReturnStatement struct {
 
 func (node *ReturnStatement) Accept(v Visitor) interface{} {
 	return v.VisitReturnStatement(node)
+}
+
+type ClassDeclaration struct {
+	Name    lexer.Token
+	Methods []*FuncDeclaration
+}
+
+func (node *ClassDeclaration) Accept(v Visitor) interface{} {
+	return v.VisitClassDeclaration(node)
+}
+
+type GetExpr struct {
+	Expr Node
+	Name lexer.Token
+}
+
+func (node *GetExpr) Accept(v Visitor) interface{} {
+	return v.VisitGetExpr(node)
+}
+
+type SetExpr struct {
+	Expr  Node
+	Name  lexer.Token
+	Value Node
+}
+
+func (node *SetExpr) Accept(v Visitor) interface{} {
+	return v.VisitSetExpr(node)
+}
+
+type ThisExpr struct {
+	Keyword lexer.Token
+}
+
+func (node *ThisExpr) Accept(v Visitor) interface{} {
+	return v.VisitThisExpr(node)
 }

@@ -223,10 +223,30 @@ func (parser *Parser) Declaration() Node {
 		return parser.FuncDeclaration()
 	}
 
+	if parser.Match(lexer.CLASS) {
+		return parser.ClassDeclaration()
+	}
+
 	return parser.Statement()
 }
 
-func (parser *Parser) FuncDeclaration() Node {
+func (parser *Parser) ClassDeclaration() Node {
+	name := parser.MustConsume(lexer.IDENTIFIER, utils.EXPECT_CLASS_NAME)
+	parser.MustConsume(lexer.LEFT_BRACE, utils.EXPECT_LEFT_BRACE_BEFORE_CLASS_BODY)
+
+	var methods []*FuncDeclaration
+	for !parser.isAtEnd() && !parser.Check(lexer.RIGHT_BRACE) {
+		method := parser.FuncDeclaration()
+		methods = append(methods, method)
+	}
+	parser.MustConsume(lexer.RIGHT_BRACE, utils.EXPECT_RIGHT_BRACE_AFTER_CLASS_BODY)
+	return &ClassDeclaration{
+		Name:    name,
+		Methods: methods,
+	}
+}
+
+func (parser *Parser) FuncDeclaration() *FuncDeclaration {
 	name := parser.MustConsume(lexer.IDENTIFIER, utils.EXPECT_FUNCTION_NAME)
 	parser.MustConsume(lexer.LEFT_PAREN, utils.EXPECT_LEFT_PAREN_AFTER_FUNCTION_NAME)
 
@@ -291,6 +311,12 @@ func (parser *Parser) Assignment() Node {
 			return &Assignment{
 				Name: v.Name,
 				Expr: value,
+			}
+		} else if v, ok := expr.(*GetExpr); ok {
+			return &SetExpr{
+				Expr:  v.Expr,
+				Name:  v.Name,
+				Value: value,
 			}
 		}
 
@@ -359,23 +385,31 @@ func (parser *Parser) Unary() Node {
 func (parser *Parser) Call() Node {
 	expr := parser.Primary()
 
-	for parser.Match(lexer.LEFT_PAREN) {
-		var arguments []Node
-		for !parser.Check(lexer.RIGHT_PAREN) && !parser.isAtEnd() {
-			arg := parser.Expression()
-			arguments = append(arguments, arg)
-			if !parser.Match(lexer.COMMA) {
-				break
+	for parser.Match(lexer.LEFT_PAREN) || parser.Match(lexer.DOT) {
+		if parser.Previous().Type == lexer.LEFT_PAREN {
+			var arguments []Node
+			for !parser.Check(lexer.RIGHT_PAREN) && !parser.isAtEnd() {
+				arg := parser.Expression()
+				arguments = append(arguments, arg)
+				if !parser.Match(lexer.COMMA) {
+					break
+				}
 			}
-		}
-		parser.MustConsume(lexer.RIGHT_PAREN, utils.EXPECT_RIGHT_PAREN_AFTER_ARGUMENTS)
-		if len(arguments) > 255 {
-			utils.Error(parser.Previous().Line, utils.WARN_NO_MORE_THAN_MAXIMUM_ARGUMENTS)
-		}
-		expr = &CallExpr{
-			Callee:    expr,
-			Arguments: arguments,
-			Paren:     parser.Previous(),
+			parser.MustConsume(lexer.RIGHT_PAREN, utils.EXPECT_RIGHT_PAREN_AFTER_ARGUMENTS)
+			if len(arguments) > 255 {
+				utils.Error(parser.Previous().Line, utils.WARN_NO_MORE_THAN_MAXIMUM_ARGUMENTS)
+			}
+			expr = &CallExpr{
+				Callee:    expr,
+				Arguments: arguments,
+				Paren:     parser.Previous(),
+			}
+		} else {
+			name := parser.MustConsume(lexer.IDENTIFIER, utils.EXPECT_PROPERTY_NAME_AFTER_DOT)
+			expr = &GetExpr{
+				Expr: expr,
+				Name: name,
+			}
 		}
 
 	}
@@ -416,6 +450,11 @@ func (parser *Parser) Primary() Node {
 	if parser.Match(lexer.STRING) {
 		return &LiteralExpr{
 			Value: parser.Previous().Value,
+		}
+	}
+	if parser.Match(lexer.THIS) {
+		return &ThisExpr{
+			Keyword: parser.Previous(),
 		}
 	}
 	if parser.Match(lexer.IDENTIFIER) {
