@@ -14,7 +14,7 @@ import (
 type AstInterpreter struct {
 	// DefaultVisitor
 	*environment.Env
-	_originEnv *environment.Env
+	_originEnvStack []*environment.Env
 }
 
 func NewAstInterpreter() *AstInterpreter {
@@ -69,6 +69,7 @@ func (v *AstInterpreter) VisitBinaryExpr(node *ast.BinaryExpr) interface{} {
 }
 
 func (v *AstInterpreter) VisitFuncDeclaration(node *ast.FuncDeclaration) interface{} {
+	node.Env = v.Env
 	v.Env.Define(node.Name.Lexeme, node)
 	return nil
 }
@@ -77,7 +78,6 @@ func (v *AstInterpreter) VisitReturnStatement(node *ast.ReturnStatement) interfa
 	var value interface{}
 	if node.Expr != nil {
 		value = node.Expr.Accept(v)
-		fmt.Printf("%#v\n", value)
 	}
 	panic(value)
 }
@@ -115,6 +115,7 @@ func (v *AstInterpreter) VisitExprStatement(node *ast.ExprStatement) interface{}
 
 func (v *AstInterpreter) VisitPrintStatement(node *ast.PrintStatement) interface{} {
 	value := node.Node.Accept(v)
+	fmt.Println(value)
 	return value
 }
 
@@ -135,7 +136,7 @@ func (v *AstInterpreter) VisitVariable(node *ast.Variable) interface{} {
 func (v *AstInterpreter) VisitProgram(node *ast.Program) interface{} {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println(r)
+			fmt.Printf("%#v\n", r)
 		}
 	}()
 	for _, statement := range node.Statements {
@@ -241,12 +242,13 @@ func (v *AstInterpreter) ExitScope() {
 	v.Env = parent
 }
 
-func (v *AstInterpreter) NewExecuteScope() {
-	newEnv := environment.NewEnvironment(v.Env)
-	v._originEnv = v.Env
-	v.Env = newEnv
+func (v *AstInterpreter) NewExecuteScope(e *environment.Env) {
+	v._originEnvStack = append(v._originEnvStack, v.Env)
+	v.Env = environment.NewEnvironment(e)
 }
 
 func (v *AstInterpreter) RestoreExecuteScope() {
-	v.Env = v._originEnv
+	originEnvLens := len(v._originEnvStack)
+	v.Env = v._originEnvStack[originEnvLens-1]
+	v._originEnvStack = v._originEnvStack[:originEnvLens-1]
 }

@@ -90,7 +90,8 @@ func (v *DefaultVisitor) EnterScope() {
 func (v *DefaultVisitor) ExitScope() {
 }
 
-func (v *DefaultVisitor) NewExecuteScope() {
+func (v *DefaultVisitor) NewExecuteScope(e *environment.Env) {
+
 }
 
 func (v *DefaultVisitor) RestoreExecuteScope() {

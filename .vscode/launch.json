@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "${file}",
-            "args": ["../examples/func.lox"]
+            "args": ["../examples/closure.lox"]
         }
     ]
 }

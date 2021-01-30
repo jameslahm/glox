@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/jameslahm/glox/environment"
 	"github.com/jameslahm/glox/lexer"
 )
 
@@ -29,8 +30,7 @@ type Visitor interface {
 	Assign(token lexer.Token, value interface{})
 	Get(token lexer.Token) interface{}
 
-	NewExecuteScope()
-
+	NewExecuteScope(*environment.Env)
 	RestoreExecuteScope()
 }
 
@@ -181,17 +181,20 @@ type FuncDeclaration struct {
 	Name   lexer.Token
 	Params []lexer.Token
 	Body   Node
+	Env    *environment.Env
 }
 
 func (f *FuncDeclaration) Call(v Visitor, arguments []interface{}) (ret interface{}) {
-	v.NewExecuteScope()
+	v.NewExecuteScope(f.Env)
 	for i, param := range f.Params {
 		v.Define(param.Lexeme, arguments[i])
 	}
 	defer func() {
 		r := recover()
-		v.RestoreExecuteScope()
-		ret = r
+		if r != nil {
+			v.RestoreExecuteScope()
+			ret = r
+		}
 	}()
 	f.Body.Accept(v)
 	v.RestoreExecuteScope()

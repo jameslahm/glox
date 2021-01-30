@@ -432,7 +432,6 @@ func (parser *Parser) MustConsume(tokenType int, message string) lexer.Token {
 		return parser.Previous()
 	}
 
-	fmt.Printf("%#v", parser.Peek())
 	message = fmt.Sprintf("[line %d] Error %s", parser.Previous().Line, message)
 	err := errors.New(message)
 	parser.Errors = append(parser.Errors, err)

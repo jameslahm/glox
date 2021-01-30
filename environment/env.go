@@ -32,7 +32,7 @@ func (e *Env) Assign(token lexer.Token, value interface{}) {
 			e.Parent.Assign(token, value)
 			return
 		}
-		panic(glox_error.NewRuntimeError(fmt.Sprintf(utils.UNDEFINED_VARIABLE, &token.Lexeme), token))
+		panic(glox_error.NewRuntimeError(fmt.Sprintf(utils.UNDEFINED_VARIABLE, token.Lexeme), token))
 	}
 }
 
@@ -43,6 +43,6 @@ func (e *Env) Get(token lexer.Token) interface{} {
 		if e.Parent != nil {
 			return e.Parent.Get(token)
 		}
-		panic(glox_error.NewRuntimeError(fmt.Sprintf(utils.UNDEFINED_VARIABLE, &token.Lexeme), token))
+		panic(glox_error.NewRuntimeError(fmt.Sprintf(utils.UNDEFINED_VARIABLE, token.Lexeme), token))
 	}
 }
