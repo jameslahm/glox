@@ -1,7 +1,6 @@
 package ast
 
 import (
-	"github.com/jameslahm/glox/environment"
 	"github.com/jameslahm/glox/lexer"
 )
 
@@ -23,15 +22,6 @@ type Visitor interface {
 	VisitCallExpr(node *CallExpr) interface{}
 	VisitFuncDeclaration(node *FuncDeclaration) interface{}
 	VisitReturnStatement(node *ReturnStatement) interface{}
-
-	EnterScope()
-	ExitScope()
-	Define(name string, value interface{})
-	Assign(token lexer.Token, value interface{})
-	Get(token lexer.Token) interface{}
-
-	NewExecuteScope(*environment.Env)
-	RestoreExecuteScope()
 }
 
 type Node interface {
@@ -172,37 +162,10 @@ func (node *CallExpr) Accept(v Visitor) interface{} {
 	return v.VisitCallExpr(node)
 }
 
-type GloxCallable interface {
-	Call(v Visitor, arguments []interface{}) interface{}
-	Arity() int
-}
-
 type FuncDeclaration struct {
 	Name   lexer.Token
 	Params []lexer.Token
 	Body   Node
-	Env    *environment.Env
-}
-
-func (f *FuncDeclaration) Call(v Visitor, arguments []interface{}) (ret interface{}) {
-	v.NewExecuteScope(f.Env)
-	for i, param := range f.Params {
-		v.Define(param.Lexeme, arguments[i])
-	}
-	defer func() {
-		r := recover()
-		if r != nil {
-			v.RestoreExecuteScope()
-			ret = r
-		}
-	}()
-	f.Body.Accept(v)
-	v.RestoreExecuteScope()
-	return nil
-}
-
-func (f *FuncDeclaration) Arity() int {
-	return len(f.Params)
 }
 
 func (f *FuncDeclaration) Accept(v Visitor) interface{} {

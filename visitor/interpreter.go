@@ -13,7 +13,7 @@ import (
 
 type AstInterpreter struct {
 	// DefaultVisitor
-	*environment.Env
+	Env             *environment.Env
 	_originEnvStack []*environment.Env
 }
 
@@ -22,7 +22,7 @@ func NewAstInterpreter() *AstInterpreter {
 		Env: environment.NewEnvironment(nil),
 	}
 
-	interpreter.Define("clock", &Clock{})
+	interpreter.Env.Define("clock", &Clock{})
 
 	return interpreter
 }
@@ -69,8 +69,11 @@ func (v *AstInterpreter) VisitBinaryExpr(node *ast.BinaryExpr) interface{} {
 }
 
 func (v *AstInterpreter) VisitFuncDeclaration(node *ast.FuncDeclaration) interface{} {
-	node.Env = v.Env
-	v.Env.Define(node.Name.Lexeme, node)
+	loxFunction := &LoxFunction{
+		Node: node,
+		Env:  v.Env,
+	}
+	v.Env.Define(node.Name.Lexeme, loxFunction)
 	return nil
 }
 
@@ -162,7 +165,7 @@ func (v *AstInterpreter) VisitCallExpr(node *ast.CallExpr) interface{} {
 		value := param.Accept(v)
 		arguments = append(arguments, value)
 	}
-	if f, ok := callee.(ast.GloxCallable); ok {
+	if f, ok := callee.(GloxCallable); ok {
 		if f.Arity() == len(node.Arguments) {
 			return f.Call(v, arguments)
 		} else {
