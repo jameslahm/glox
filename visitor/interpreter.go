@@ -71,10 +71,7 @@ func (v *AstInterpreter) VisitBinaryExpr(node *ast.BinaryExpr) interface{} {
 }
 
 func (v *AstInterpreter) VisitFuncDeclaration(node *ast.FuncDeclaration) interface{} {
-	loxFunction := &LoxFunction{
-		Node: node,
-		Env:  v.Env,
-	}
+	loxFunction := NewLoxFunction(node, v.Env)
 	v.Env.Define(node.Name.Lexeme, loxFunction)
 	return nil
 }
@@ -172,7 +169,7 @@ func (v *AstInterpreter) VisitCallExpr(node *ast.CallExpr) interface{} {
 		value := param.Accept(v)
 		arguments = append(arguments, value)
 	}
-	if f, ok := callee.(GloxCallable); ok {
+	if f, ok := callee.(LoxCallable); ok {
 		if f.Arity() == len(node.Arguments) {
 			return f.Call(v, arguments)
 		} else {
@@ -218,6 +215,36 @@ func (v *AstInterpreter) VisitLogicalExpr(node *ast.LogicalExpr) interface{} {
 	return nil
 }
 
+func (v *AstInterpreter) VisitGetExpr(node *ast.GetExpr) interface{} {
+	expr := node.Expr.Accept(v)
+	if instance, ok := expr.(*LoxInstance); ok {
+		return instance.Get(node.Name)
+	} else {
+		panic(glox_error.NewRuntimeError(utils.ONLY_INSTANCES_HAVE_PROPERTIES, node.Name))
+	}
+}
+
+func (v *AstInterpreter) VisitSetExpr(node *ast.SetExpr) interface{} {
+	expr := node.Expr.Accept(v)
+	if instance, ok := expr.(*LoxInstance); ok {
+		value := node.Value.Accept(v)
+		instance.Set(node.Name, value)
+		return value
+	} else {
+		panic(glox_error.NewRuntimeError(utils.ONLY_INSTANCES_HAVE_PROPERTIES, node.Name))
+	}
+}
+
+func (v *AstInterpreter) VisitClassDeclaration(node *ast.ClassDeclaration) interface{} {
+	v.Env.Define(node.Name.Lexeme, nil)
+	class := NewLoxClass(node.Name.Lexeme)
+	for _, method := range node.Methods {
+		class.Methods[method.Name.Lexeme] = NewLoxFunction(method, v.Env)
+	}
+	v.Env.Assign(node.Name, class, 0)
+	return nil
+}
+
 func (v *AstInterpreter) VisitWhileStatement(node *ast.WhileStatement) interface{} {
 	value := cast.ToBool(node.Expr.Accept(v))
 	for value {
@@ -225,6 +252,12 @@ func (v *AstInterpreter) VisitWhileStatement(node *ast.WhileStatement) interface
 		value = cast.ToBool(node.Expr.Accept(v))
 	}
 	return nil
+}
+
+func (v *AstInterpreter) VisitThisExpr(node *ast.ThisExpr) interface{} {
+	distance := v.VariableBindDistance[node]
+	return v.Env.Get(node.Keyword, distance)
+
 }
 
 func (v *AstInterpreter) CheckNumberOperand(token lexer.Token, value interface{}) {

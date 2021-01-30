@@ -8,11 +8,19 @@ import (
 	"github.com/jameslahm/glox/utils"
 )
 
+const (
+	FunctionInit = iota
+	FunctionNormal
+	None
+	Class
+)
+
 type Resolver struct {
 	Scopes                   []map[string]bool
 	Errors                   []error
 	VariableBindingDistances map[ast.Node]int
-	IsInFunction             bool
+	InFunctionType           int
+	InClassType              int
 }
 
 func NewResolver() *Resolver {
@@ -21,6 +29,8 @@ func NewResolver() *Resolver {
 	return &Resolver{
 		Scopes:                   scopes,
 		VariableBindingDistances: make(map[ast.Node]int),
+		InFunctionType:           None,
+		InClassType:              None,
 	}
 }
 
@@ -107,11 +117,25 @@ func (v *Resolver) VisitFuncDeclaration(node *ast.FuncDeclaration) interface{} {
 		v.Declare(param)
 		v.Define(param)
 	}
-	isInFunctionBackUp := v.IsInFunction
-	v.IsInFunction = true
+	inFunctionTypeBackup := v.InFunctionType
+	if v.InClassType != None && node.Name.Lexeme == "init" {
+		v.InFunctionType = FunctionInit
+	} else {
+		v.InFunctionType = FunctionNormal
+	}
 	node.Body.Accept(v)
-	v.IsInFunction = isInFunctionBackUp
+	v.InFunctionType = inFunctionTypeBackup
 	v.ExitScope()
+	return nil
+}
+
+func (v *Resolver) VisitThisExpr(node *ast.ThisExpr) interface{} {
+	if v.InClassType != Class {
+		err := errors.New(utils.WARN_USE_THIS_OUT_CLASS)
+		v.Errors = append(v.Errors, err)
+		utils.Error(node.Keyword.Line, err.Error())
+	}
+	v.Resolve(node, node.Keyword.Lexeme)
 	return nil
 }
 
@@ -135,13 +159,18 @@ func (v *Resolver) VisitPrintStatement(node *ast.PrintStatement) interface{} {
 }
 
 func (v *Resolver) VisitReturnStatement(node *ast.ReturnStatement) interface{} {
-	if !v.IsInFunction {
+	if v.InFunctionType == None {
 		err := errors.New(utils.WARN_RETURN_FROM_NOFUNCTION)
 		v.Errors = append(v.Errors, err)
 		utils.Error(node.Keyword.Line, err.Error())
 	}
 
 	if node.Expr != nil {
+		if v.InFunctionType == FunctionInit {
+			err := errors.New(utils.WARN_RETURN_VALUE_FROM_INIT)
+			v.Errors = append(v.Errors, err)
+			utils.Error(node.Keyword.Line, err.Error())
+		}
 		node.Expr.Accept(v)
 	}
 	return nil
@@ -192,5 +221,37 @@ func (v *Resolver) VisitProgram(node *ast.Program) interface{} {
 	for _, statement := range node.Statements {
 		statement.Accept(v)
 	}
+	return nil
+}
+
+func (v *Resolver) VisitClassDeclaration(node *ast.ClassDeclaration) interface{} {
+
+	inClassTypeBackUp := v.InClassType
+
+	v.InClassType = Class
+	v.Declare(node.Name)
+	v.Define(node.Name)
+
+	v.EnterScope()
+
+	scope := v.GetCurrentScope()
+	scope["this"] = true
+	for _, method := range node.Methods {
+		method.Accept(v)
+	}
+
+	v.ExitScope()
+	v.InClassType = inClassTypeBackUp
+	return nil
+}
+
+func (v *Resolver) VisitGetExpr(node *ast.GetExpr) interface{} {
+	node.Expr.Accept(v)
+	return nil
+}
+
+func (v *Resolver) VisitSetExpr(node *ast.SetExpr) interface{} {
+	node.Expr.Accept(v)
+	node.Value.Accept(v)
 	return nil
 }

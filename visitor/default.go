@@ -82,3 +82,19 @@ func (v *DefaultVisitor) VisitFuncDeclaration(node *ast.FuncDeclaration) interfa
 func (v *DefaultVisitor) VisitReturnStatement(node *ast.ReturnStatement) interface{} {
 	return nil
 }
+
+func (v *DefaultVisitor) VisitClassDeclaration(node *ast.ClassDeclaration) interface{} {
+	return nil
+}
+
+func (v *DefaultVisitor) VisitGetExpr(node *ast.GetExpr) interface{} {
+	return nil
+}
+
+func (v *DefaultVisitor) VisitSetExpr(node *ast.SetExpr) interface{} {
+	return nil
+}
+
+func (v *DefaultVisitor) VisitThisExpr(node *ast.ThisExpr) interface{} {
+	return nil
+}
