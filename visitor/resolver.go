@@ -2,6 +2,7 @@ package visitor
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/jameslahm/glox/ast"
 	"github.com/jameslahm/glox/lexer"
@@ -13,6 +14,7 @@ const (
 	FunctionNormal
 	None
 	Class
+	SubClass
 )
 
 type Resolver struct {
@@ -232,6 +234,21 @@ func (v *Resolver) VisitClassDeclaration(node *ast.ClassDeclaration) interface{}
 	v.Declare(node.Name)
 	v.Define(node.Name)
 
+	if node.SuperClass != nil {
+		if node.SuperClass.Name.Lexeme == node.Name.Lexeme {
+			err := errors.New(utils.WARN_INHERIT_FROM_SELF)
+			v.Errors = append(v.Errors, err)
+			fmt.Println(err)
+		}
+
+		v.InClassType = SubClass
+
+		v.EnterScope()
+		scope := v.GetCurrentScope()
+		scope["super"] = true
+		node.SuperClass.Accept(v)
+	}
+
 	v.EnterScope()
 
 	scope := v.GetCurrentScope()
@@ -241,6 +258,9 @@ func (v *Resolver) VisitClassDeclaration(node *ast.ClassDeclaration) interface{}
 	}
 
 	v.ExitScope()
+	if node.SuperClass != nil {
+		v.ExitScope()
+	}
 	v.InClassType = inClassTypeBackUp
 	return nil
 }
@@ -253,5 +273,19 @@ func (v *Resolver) VisitGetExpr(node *ast.GetExpr) interface{} {
 func (v *Resolver) VisitSetExpr(node *ast.SetExpr) interface{} {
 	node.Expr.Accept(v)
 	node.Value.Accept(v)
+	return nil
+}
+
+func (v *Resolver) VisitSuperExpr(node *ast.SuperExpr) interface{} {
+	if v.InClassType == None {
+		err := errors.New(utils.WARN_USE_SUPER_OUT_CLASS)
+		v.Errors = append(v.Errors, err)
+		fmt.Println(err)
+	} else if v.InClassType == Class {
+		err := errors.New(utils.WARN_USE_SUPER_OUT_SUBCLASS)
+		v.Errors = append(v.Errors, err)
+		fmt.Println(err)
+	}
+	v.Resolve(node, node.Keyword.Lexeme)
 	return nil
 }

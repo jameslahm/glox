@@ -237,12 +237,51 @@ func (v *AstInterpreter) VisitSetExpr(node *ast.SetExpr) interface{} {
 
 func (v *AstInterpreter) VisitClassDeclaration(node *ast.ClassDeclaration) interface{} {
 	v.Env.Define(node.Name.Lexeme, nil)
-	class := NewLoxClass(node.Name.Lexeme)
+
+	var superClass *LoxClass
+
+	if node.SuperClass != nil {
+		var ok = false
+		superClass, ok = node.SuperClass.Accept(v).(*LoxClass)
+		if !ok {
+			panic(glox_error.NewRuntimeError(utils.SUPER_CLASS_MUST_BE_CLASS, node.Name))
+		}
+
+		v.EnterScope()
+		v.Env.Define("super", superClass)
+	}
+
+	class := NewLoxClass(node.Name.Lexeme, superClass)
 	for _, method := range node.Methods {
-		class.Methods[method.Name.Lexeme] = NewLoxFunction(method, v.Env)
+		var isInitializer = false
+		if method.Name.Lexeme == "init" {
+			isInitializer = true
+		}
+		class.Methods[method.Name.Lexeme] = NewLoxFunction(method, v.Env, isInitializer)
+	}
+	if node.SuperClass != nil {
+		v.ExitScope()
 	}
 	v.Env.Assign(node.Name, class, 0)
 	return nil
+}
+
+func (v *AstInterpreter) VisitSuperExpr(node *ast.SuperExpr) interface{} {
+	distance := v.VariableBindDistance[node]
+	superClass := v.Env.Get(node.Keyword, distance)
+
+	token := node.Keyword
+	token.Lexeme = "this"
+	token.Type = lexer.THIS
+	instance := v.Env.Get(token, distance-1)
+
+	if class, ok := superClass.(*LoxClass); ok {
+		if ins, ok := instance.(*LoxInstance); ok {
+			return class.GetMethod(node.Method).Bind(ins)
+		}
+	}
+	panic(glox_error.NewRuntimeError(utils.SUPER_CLASS_MUST_BE_CLASS, node.Keyword))
+
 }
 
 func (v *AstInterpreter) VisitWhileStatement(node *ast.WhileStatement) interface{} {

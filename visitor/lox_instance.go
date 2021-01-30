@@ -1,11 +1,7 @@
 package visitor
 
 import (
-	"fmt"
-
-	"github.com/jameslahm/glox/glox_error"
 	"github.com/jameslahm/glox/lexer"
-	"github.com/jameslahm/glox/utils"
 )
 
 type LoxInstance struct {
@@ -24,10 +20,7 @@ func (instance *LoxInstance) Get(token lexer.Token) interface{} {
 	if v, ok := instance.Fields[token.Lexeme]; ok {
 		return v
 	} else {
-		if v, ok := instance.Class.Methods[token.Lexeme]; ok {
-			return v.Bind(instance)
-		}
-		panic(glox_error.NewRuntimeError(fmt.Sprintf(utils.UNDEFINED_PROPERTY, token.Lexeme), token))
+		return instance.Class.GetMethod(token).Bind(instance)
 	}
 }
 

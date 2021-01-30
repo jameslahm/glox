@@ -98,3 +98,7 @@ func (v *DefaultVisitor) VisitSetExpr(node *ast.SetExpr) interface{} {
 func (v *DefaultVisitor) VisitThisExpr(node *ast.ThisExpr) interface{} {
 	return nil
 }
+
+func (v *DefaultVisitor) VisitSuperExpr(node *ast.SuperExpr) interface{} {
+	return nil
+}

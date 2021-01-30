@@ -232,6 +232,15 @@ func (parser *Parser) Declaration() Node {
 
 func (parser *Parser) ClassDeclaration() Node {
 	name := parser.MustConsume(lexer.IDENTIFIER, utils.EXPECT_CLASS_NAME)
+	var superClass *Variable
+
+	if parser.Match(lexer.LESS) {
+		token := parser.MustConsume(lexer.IDENTIFIER, utils.EXPECT_SUPER_CLASS_NAME)
+		superClass = &Variable{
+			Name: token,
+		}
+	}
+
 	parser.MustConsume(lexer.LEFT_BRACE, utils.EXPECT_LEFT_BRACE_BEFORE_CLASS_BODY)
 
 	var methods []*FuncDeclaration
@@ -241,8 +250,9 @@ func (parser *Parser) ClassDeclaration() Node {
 	}
 	parser.MustConsume(lexer.RIGHT_BRACE, utils.EXPECT_RIGHT_BRACE_AFTER_CLASS_BODY)
 	return &ClassDeclaration{
-		Name:    name,
-		Methods: methods,
+		Name:       name,
+		Methods:    methods,
+		SuperClass: superClass,
 	}
 }
 
@@ -460,6 +470,16 @@ func (parser *Parser) Primary() Node {
 	if parser.Match(lexer.IDENTIFIER) {
 		return &Variable{
 			Name: parser.Previous(),
+		}
+	}
+	if parser.Match(lexer.SUPER) {
+		keyword := parser.Previous()
+		parser.MustConsume(lexer.COMMA, utils.EXPECT_DOT_AFTER_SUPER)
+		token := parser.MustConsume(lexer.IDENTIFIER, utils.EXPECT_SUPER_CLASS_NAME)
+
+		return &SuperExpr{
+			Keyword: keyword,
+			Method:  token,
 		}
 	}
 	return nil

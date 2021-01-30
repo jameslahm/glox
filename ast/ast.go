@@ -26,6 +26,7 @@ type Visitor interface {
 	VisitGetExpr(node *GetExpr) interface{}
 	VisitSetExpr(node *SetExpr) interface{}
 	VisitThisExpr(node *ThisExpr) interface{}
+	VisitSuperExpr(node *SuperExpr) interface{}
 }
 
 type Node interface {
@@ -186,8 +187,9 @@ func (node *ReturnStatement) Accept(v Visitor) interface{} {
 }
 
 type ClassDeclaration struct {
-	Name    lexer.Token
-	Methods []*FuncDeclaration
+	Name       lexer.Token
+	Methods    []*FuncDeclaration
+	SuperClass *Variable
 }
 
 func (node *ClassDeclaration) Accept(v Visitor) interface{} {
@@ -219,4 +221,13 @@ type ThisExpr struct {
 
 func (node *ThisExpr) Accept(v Visitor) interface{} {
 	return v.VisitThisExpr(node)
+}
+
+type SuperExpr struct {
+	Keyword lexer.Token
+	Method  lexer.Token
+}
+
+func (node *SuperExpr) Accept(v Visitor) interface{} {
+	return v.VisitSuperExpr(node)
 }
